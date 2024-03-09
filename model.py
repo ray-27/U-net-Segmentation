@@ -47,3 +47,35 @@ class UNET(nn.Module):
         self.final_conv = nn.Conv2d(features[0],out_channels,kernel_size=1)
 
     def forward(self,x):
+        skip_connections = []
+
+        for down in self.down:
+            x = down(x)
+            skip_connections.append(x)
+            x = self.pool(x)
+
+        x = self.bottleneck(x)
+        skip_connections = skip_connections[::-1]
+
+        for idx in range(0,len(self.ups),2):
+            x = self.ups[idx](x)
+            skip_connection = skip_connections[idx//2]
+
+            if x.shape != skip_connection.shape:
+                x = TF.resize(x, size=skip_connection.shape[2:])
+
+            concat_skip = torch.cat((skip_connection, x), dim=1)
+            x = self.ups[idx+1](concat_skip)
+
+        return self.final_conv(x)
+
+def test():
+    x = torch.rand((3,1,160,160))
+    model = UNET(in_channels=1,out_channels=1)
+    preds = model(x)
+    print(preds.shape)
+    print(x.shape)
+    assert preds.shape == x.shape
+
+if __name__ == "__main__":
+    test()
