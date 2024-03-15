@@ -7,6 +7,14 @@ import torch.nn as nn
 import torch.optim as optim
 from model import UNET
 
+from utils import (
+    load_checkpoint,
+    save_checkpoint,
+    get_loaders,
+    check_accuracy,
+    save_predictions_as_imgs,
+)
+
 LEARNING_RATE = 1e-4
 
 DEVICE = ""
@@ -30,7 +38,7 @@ TRAIN_MASK_DIR = ""
 VAL_IMG_DIR = ""
 VAL_MASK_DIR = ""
 
-def train_fu(loader, model, optimizer, loss_fn, scaler):
+def train_fn(loader, model, optimizer, loss_fn, scaler):
     loop = tqdm(loader)
 
     for batch_idx, (data,targets) in enumerate(loop):
@@ -87,6 +95,43 @@ def main():
 
     model = UNET(in_channels=3,out_channels=1).to(DEVICE)
     loss_fn = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+
+    train_loader, val_loader = get_loaders(
+            TRAIN_IMG_DIR,
+            TRAIN_MASK_DIR,
+            VAL_IMG_DIR,
+            VAL_MASK_DIR,
+            BATCH_SIZE,
+            train_transform,
+            val_transform,
+            NUM_WORKERS,
+            PIN_MEMORY,
+        )
+
+    if LOAD_MODEL:
+        load_checkpoint(torch.load("my_checkpoint.pth.tar"), model)
+
+    check_accuracy(val_loader, model, device=DEVICE)
+    scaler = torch.cuda.amp.GradScaler()
+
+    for epoch in range(NUM_EPOCHES):
+        train_fn(train_loader, model, optimizer, loss_fn, scaler)
+
+            # save model
+        checkpoint = {
+                "state_dict": model.state_dict(),
+                "optimizer":optimizer.state_dict(),
+            }
+        save_checkpoint(checkpoint)
+
+            # check accuracy
+        check_accuracy(val_loader, model, device=DEVICE)
+
+            # print some examples to a folder
+        save_predictions_as_imgs(
+                val_loader, model, folder="saved_images/", device=DEVICE
+            )
 
 
 if __name__ == "__main__":
