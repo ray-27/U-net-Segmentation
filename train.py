@@ -26,15 +26,15 @@ else: DEVICE = "cpu"
 print(f'device model is running on : {DEVICE}')
 
 BATCH_SIZE = 16
-NUM_EPOCHES = 3
+NUM_EPOCHES = 1
 NUM_WORKERS = 2
 IMAGE_HEIGHT = 160
 IMAGE_WIDTH = 240
 PIN_MEMORY = True
 LOAD_MODEL = False
 
-TRAIN_IMG_DIR = ""
-TRAIN_MASK_DIR = ""
+TRAIN_IMG_DIR = "/kaggle/working/train"
+TRAIN_MASK_DIR = "/kaggle/working/train_masks"
 VAL_IMG_DIR = ""
 VAL_MASK_DIR = ""
 
@@ -112,8 +112,8 @@ def main():
     if LOAD_MODEL:
         load_checkpoint(torch.load("my_checkpoint.pth.tar"), model)
 
-    check_accuracy(val_loader, model, device=DEVICE)
-    scaler = torch.cuda.amp.GradScaler()
+    # check_accuracy(val_loader, model, device=DEVICE)
+    # scaler = torch.cuda.amp.GradScaler()
 
     for epoch in range(NUM_EPOCHES):
         train_fn(train_loader, model, optimizer, loss_fn, scaler)
@@ -126,7 +126,7 @@ def main():
         save_checkpoint(checkpoint)
 
             # check accuracy
-        check_accuracy(val_loader, model, device=DEVICE)
+        # check_accuracy(val_loader, model, device=DEVICE)
 
             # print some examples to a folder
         save_predictions_as_imgs(
